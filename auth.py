@@ -1,19 +1,38 @@
 import requests
 import streamlit as st
 
-ROLES_API = "https://digital-trails.org/api/v2.1/roles?resource=study:{study}"
+import config
 
-@st.cache_data(ttl=300)
-def fetch_roles(study: str, token: str) -> list[str]:
-    url = ROLES_API.format(study=study)
+# Legacy destination, kept for reference; config.resolve() decides which one this deployment uses.
+ROLES_API = config.LEGACY_ROLES_API
+
+
+def roles_from_api(study: str, token: str, destinations: "config.Destinations | None" = None, http_get=requests.get) -> list[str]:
+    """The caller's roles in `study`, from the roles API. Raises on any failure, so callers deny.
+
+    The destination is resolved and validated before the token leaves this process. On a MAPL
+    deployment redirects are not followed (a 3xx is a failure) and the call times out.
+    """
+    destinations = destinations or config.current()
+    url = destinations.roles_url(study)
     headers = {"Authorization": f"Bearer {token}", "x-portal": "True"}
 
-    resp = requests.get(url, headers=headers)
+    if destinations.mode == "mapl":
+        resp = http_get(url, headers=headers, timeout=10, allow_redirects=False)
+    else:
+        resp = http_get(url, headers=headers)
     if resp.status_code != 200:
         raise Exception(f"Authentication failed: {resp.status_code}")
 
     data = resp.json()
-    return data.get("roles", [])
+    roles = data.get("roles", []) if isinstance(data, dict) else []
+    # Only a list counts: "admin" in "badmin" would otherwise pass for a string.
+    return [r for r in roles if isinstance(r, str)] if isinstance(roles, list) else []
+
+
+@st.cache_data(ttl=300)
+def fetch_roles(study: str, token: str) -> list[str]:
+    return roles_from_api(study, token)
 
 def set_session_state():
     qp_token = st.query_params.get("token")

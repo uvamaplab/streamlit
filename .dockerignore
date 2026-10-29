@@ -11,3 +11,4 @@ venv
 *.parquet
 data/
 .expo
+tests
