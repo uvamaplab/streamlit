@@ -140,6 +140,17 @@ def test_authorized_synthetic_admin_sees_events(monkeypatch, fixture_table):
     assert storage.opened == [("abfs://maplsynth/datums", "outputsmapltest")]
 
 
+def test_mapl_removes_the_token_from_the_url(monkeypatch, fixture_table):
+    at, _, _ = run_events(monkeypatch, TEST_ENV, Response(200, {"roles": ["admin"]}), fixture_table)
+    assert "token" not in at.query_params
+    assert at.query_params["study"] == ["maplsynth"] or at.query_params["study"] == "maplsynth"
+
+
+def test_legacy_keeps_the_url_unchanged(monkeypatch, fixture_table):
+    at, _, _ = run_events(monkeypatch, {}, Response(200, {"roles": ["admin"]}), fixture_table, study="mtm")
+    assert "token" in at.query_params
+
+
 def test_empty_data_says_so(monkeypatch, empty_table):
     at, _, storage = run_events(monkeypatch, TEST_ENV, Response(200, {"roles": ["admin"]}), empty_table)
     assert storage.opened

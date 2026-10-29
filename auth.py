@@ -45,6 +45,18 @@ def set_session_state():
     if ("token" not in st.session_state) or (qp_token and st.session_state.get("token") != qp_token):
         st.session_state["token"] = qp_token
 
+    # MAPL only: once the token is in session state, take it out of the address bar so it does not
+    # linger in history, bookmarks or copied links. Legacy keeps the URL as it was.
+    if qp_token and _mapl_mode():
+        del st.query_params["token"]
+
+
+def _mapl_mode() -> bool:
+    try:
+        return config.current().mode == "mapl"
+    except config.ConfigurationError:
+        return True  # misconfigured MAPL: still scrub; the access check refuses next
+
 def check_access_admin_only() -> bool:
     
     set_session_state()
