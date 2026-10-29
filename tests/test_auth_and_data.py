@@ -46,6 +46,18 @@ class Recorder:
         return self._responses.pop(0)
 
 
+@pytest.mark.parametrize("roles", [["admin"], ["viewer", "admin"], []])
+def test_a_list_of_strings_is_returned_as_is(monkeypatch, roles):
+    use(monkeypatch, TEST_ENV)
+    assert auth.roles_from_api("maplsynth", "synthetic-token", http_get=Recorder(Response(200, {"roles": roles}))) == roles
+
+
+@pytest.mark.parametrize("body", [{"roles": ["admin", 123]}, {"roles": ["admin", None]}, {"roles": ["admin", ["admin"]]}])
+def test_a_mixed_type_list_grants_nothing(monkeypatch, body):
+    use(monkeypatch, TEST_ENV)
+    assert auth.roles_from_api("maplsynth", "synthetic-token", http_get=Recorder(Response(200, body))) == []
+
+
 def test_test_deployment_calls_only_its_approved_roles_api(monkeypatch):
     use(monkeypatch, TEST_ENV)
     http = Recorder(Response(200, {"roles": ["admin"]}))
@@ -81,6 +93,9 @@ def test_a_rejected_destination_never_receives_the_token(monkeypatch, env):
 @pytest.mark.parametrize("response", [
     Response(500, {}), Response(401, {}), Response(302, {}), Response(200, {"roles": "admin-ish"}),
     Response(200, {"roles": None}), Response(200, ["admin"]),
+    Response(200, {"roles": ["admin", 123]}), Response(200, {"roles": ["admin", None]}),
+    Response(200, {"roles": ["admin", ["admin"]]}), Response(200, {"roles": [{"admin": True}]}),
+    Response(200, {}),
 ])
 def test_unavailable_or_malformed_roles_deny(monkeypatch, response):
     use(monkeypatch, TEST_ENV)

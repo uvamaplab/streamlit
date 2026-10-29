@@ -23,8 +23,10 @@ The roles API must answer `200` with `{"roles": [...]}` for the caller's bearer 
 
 - A study id that is not a valid container name is refused before storage is touched, and the
   study is percent-encoded into the roles URL (identical for valid study ids).
-- A roles answer whose `roles` is not a list of strings grants nothing (a string such as `"admin-x"`
-  could otherwise satisfy `"admin" in roles`).
+- **Authorization correction:** a roles answer grants something only when `roles` is a list made
+  entirely of strings. A string (`"admin-x"` would satisfy `"admin" in roles`), a missing field, or a
+  list with any non-string item (`["admin", 123]`) is malformed and grants nothing. Legacy accepted
+  all of these.
 - An empty datums table now returns an empty frame, so a page shows "No data is available"; legacy
   raised "Columns must be same length as key".
 - MAPL role lookups time out after 10 s and do not follow redirects; legacy lookups are unchanged.

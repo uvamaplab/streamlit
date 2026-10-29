@@ -165,6 +165,8 @@ def test_empty_data_says_so(monkeypatch, empty_table):
     ("roles service failure", dict(roles_response=Response(503, {}))),
     ("roles redirect", dict(roles_response=Response(302, {}))),
     ("malformed roles", dict(roles_response=Response(200, {"roles": "admin"}))),
+    ("mixed-type roles", dict(roles_response=Response(200, {"roles": ["admin", 123]}))),
+    ("roles not an object", dict(roles_response=Response(200, ["admin"]))),
     ("roles unreachable", dict(roles_response=ConnectionError("unreachable"))),
 ])
 def test_denied_requests_never_reach_storage(monkeypatch, fixture_table, name, kwargs):

@@ -26,9 +26,12 @@ def roles_from_api(study: str, token: str, destinations: "config.Destinations | 
         raise Exception(f"Authentication failed: {resp.status_code}")
 
     data = resp.json()
-    roles = data.get("roles", []) if isinstance(data, dict) else []
-    # Only a list counts: "admin" in "badmin" would otherwise pass for a string.
-    return [r for r in roles if isinstance(r, str)] if isinstance(roles, list) else []
+    roles = data.get("roles") if isinstance(data, dict) else None
+    # Only a list made entirely of strings counts. Anything else, including a list with one non-string
+    # item such as ["admin", 123], is malformed and grants nothing: the whole answer is discarded.
+    if not isinstance(roles, list) or not all(isinstance(r, str) for r in roles):
+        return []
+    return roles
 
 
 @st.cache_data(ttl=300)
