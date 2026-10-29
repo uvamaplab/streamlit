@@ -15,3 +15,4 @@ tests
 tools
 synthetic-out
 .pytest_cache
+.github
