@@ -50,17 +50,30 @@ read; the fixture has both, to show that.
 
 **Study id versus container.** The dashboard uses the `study` query parameter twice: as the study in
 the roles lookup (`resource=study:{study}`) and as the storage container (`abfs://{study}/datums`).
-The writer stores a study's prod-environment datums in container `{study}` and its test-environment
-datums in `{study}-test`, so the dashboard reads only the prod-environment container. For the test
-stack the synthetic study is `maplsynth` and its container is `maplsynth` in `outputsmapltest`.
-`maplsynth-test` is a different container (where the ingestion trial's test-environment datums would
-land) and is not what the dashboard reads.
+How the writer picks a container: a datum sent with a `code` goes to the container that code's
+document resolves to, `{study}` when its env is `prod` and `{study}-{env}` otherwise; a datum sent
+without a code goes to the `study` value it carries, lowercased, as is. Which resource group or
+stack the writer runs in adds no suffix. So `maplsynth` and `maplsynth-test` are different
+containers, and the dashboard reads whichever container equals the `study` it is given.
 
-**Future upload (not done; needs approval).** Target `outputsmapltest`, container `maplsynth`, path
-`datums/`. Bounded and idempotent: refuse if the container exists and its `datums/_delta_log` does not
-carry `maplab.fixture = dashboard-test-input`; otherwise upload only `datums/` with
-`az storage blob upload-batch --auth-mode login --destination maplsynth --destination-path datums
---source <out>/datums --overwrite false`. Never into another container or account.
+**This dashboard test is independently seeded.** The fixture goes to `outputsmapltest`, container
+`maplsynth`, path `datums/`, authorized as `study:maplsynth`. It is not the parked ingestion trial
+(whose datum used `study=maplsynth-test` and would land in container `maplsynth-test`), and it is not
+an ingestion-to-dashboard test.
+
+**Upload (prepared, not run): `tools/upload_fixture.py`.** Fixed target `outputsmapltest/maplsynth/datums/`,
+operator Entra identity, never account keys. It refuses a non-fixture local table, any blob in the
+container outside `datums/`, and an existing `datums/` table without the fixture marker. Uploads are
+create-only, data files before `_delta_log`, so an interrupted run leaves no readable partial table and
+a rerun skips identical files and stops on different ones. After uploading it reads the remote table
+back and compares version, schema, marker, row count and participants; the marker alone never counts
+as complete. The container is created separately.
+
+**Role document (prepared, not run): `tools/create_role_document.py`.** One create-only document,
+`{"id": "study:maplsynth", "pid": "<user id>", "roles": ["admin"], "synthetic": true}`, in
+`cosmosmapltest/cosmicworks/roles_old` (partition key `/pid`), for the Clerk user id of the real
+development-portal test user, supplied explicitly. An existing document is refused (409), never
+replaced.
 
 ## Tests
 
