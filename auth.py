@@ -7,13 +7,14 @@ import config
 ROLES_API = config.LEGACY_ROLES_API
 
 
-def roles_from_api(study: str, token: str, destinations: "config.Destinations | None" = None, http_get=requests.get) -> list[str]:
+def roles_from_api(study: str, token: str, destinations: "config.Destinations | None" = None, http_get=None) -> list[str]:
     """The caller's roles in `study`, from the roles API. Raises on any failure, so callers deny.
 
     The destination is resolved and validated before the token leaves this process. On a MAPL
     deployment redirects are not followed (a 3xx is a failure) and the call times out.
     """
     destinations = destinations or config.current()
+    http_get = http_get or requests.get
     url = destinations.roles_url(study)
     headers = {"Authorization": f"Bearer {token}", "x-portal": "True"}
 

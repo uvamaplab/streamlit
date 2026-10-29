@@ -20,6 +20,10 @@ def load_datums(study: str) -> pd.DataFrame:
         storage_options = {"ACCOUNT_NAME": destinations.outputs_account, "BEARER_TOKEN": accesstoken.token}
         dt = DeltaTable(f"abfs://{container}/datums", storage_options=storage_options)
         df = dt.to_pandas()
+        # Intentional change from legacy: an empty table used to raise here ("Columns must be same
+        # length as key"); returning it lets each page show its own "No data is available".
+        if df.empty:
+            return df
 
         df["date"] = pd.to_datetime(df["ts"], unit="s", errors="coerce")
         df["date"] = df.apply(lambda r: to_local_naive(r['date'], r['tz']), axis=1)

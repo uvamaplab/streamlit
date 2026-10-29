@@ -12,3 +12,6 @@ venv
 data/
 .expo
 tests
+tools
+synthetic-out
+.pytest_cache
